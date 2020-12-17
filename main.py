@@ -6,6 +6,7 @@ import sys
 import random
 import time
 import copy
+import sys
 
 
 class Snake:
@@ -20,128 +21,195 @@ class Snake:
 		self.dir = dirr
 	
 		for i in range(len(self.segments)):
-			pygame.draw.rect(self.surface, self.color, (self.segments[i][0]*self.seg_w, self.segments[i][1]*self.seg_w, self.seg_w, self.seg_w))
+			pygame.draw.rect(self.surface, self.color, (self.segments[i].x*self.seg_w, self.segments[i].y*self.seg_w, self.seg_w, self.seg_w))
 
+		
 		if(self.dir == "up"):
 			copy = self.segments[:-1]
-			copy.insert(0, (copy[0][0], copy[0][1]-1))
+			copy.insert(0, seg(copy[0].x, copy[0].y-1))
+			copy[0].set_dir("up")
 			self.segments = copy[:]
 
 		if(self.dir == "down"):
 			copy = self.segments[:-1]
-			copy.insert(0, (copy[0][0], copy[0][1]+1))
+			copy.insert(0, seg(copy[0].x, copy[0].y+1))
+			copy[0].set_dir("down")
 			self.segments = copy[:]
 
 		if(self.dir == "right"):
 			copy = self.segments[:-1]
-			copy.insert(0, (copy[0][0]+1, copy[0][1]))
+			copy.insert(0, seg(copy[0].x+1, copy[0].y))
+			copy[0].set_dir("right")
 			self.segments = copy[:]
 
 		if(self.dir == "left"):
 			copy = self.segments[:-1]
-			copy.insert(0, (copy[0][0]-1, copy[0][1]))
+			copy.insert(0, seg(copy[0].x-1, copy[0].y))
+			copy[0].set_dir("left")
 			self.segments = copy[:]
 
 	def get_head_pos(self):
-		return self.segments[2]
+		return (self.segments[0].x, self.segments[0].y)
 
 	def add_seg(self):
 
-		print(self.segments)
 		
-		if(self.dir == "up"):
-			self.segments.insert(len(self.segments), (self.segments[len(self.segments)-1][0], self.segments[len(self.segments)-1][0]-1))
+		
+		if(self.segments[len(self.segments)-1].dir == "up"):
+			self.segments.insert(len(self.segments), seg(self.segments[len(self.segments)-1].x, self.segments[len(self.segments)-1].y+1))
+			self.segments[len(self.segments)-1].set_dir(self.segments[len(self.segments)-2].dir)
 
-		if(self.dir == "left"):
-			self.segments.insert(len(self.segments), (self.segments[len(self.segments)-1][0]+1, self.segments[len(self.segments)-1][0]))
+		if(self.segments[len(self.segments)-1].dir == "down"):
+			self.segments.insert(len(self.segments), seg(self.segments[len(self.segments)-1].x, self.segments[len(self.segments)-1].y-1))
+			self.segments[len(self.segments)-1].set_dir(self.segments[len(self.segments)-2].dir)
 
-		if(self.dir == "right"):
-			self.segments.insert(len(self.segments), (self.segments[len(self.segments)-1][0]-1, self.segments[len(self.segments)-1][0]))
+		if(self.segments[len(self.segments)-1].dir == "left"):
+			self.segments.insert(len(self.segments), seg(self.segments[len(self.segments)-1].x+1, self.segments[len(self.segments)-1].y))
+			self.segments[len(self.segments)-1].set_dir(self.segments[len(self.segments)-2].dir)
 
-		print(self.segments[len(self.segments)-1])
+		if(self.segments[len(self.segments)-1].dir == "right"):
+			self.segments.insert(len(self.segments), seg(self.segments[len(self.segments)-1].x-1, self.segments[len(self.segments)-1].y))
+			self.segments[len(self.segments)-1].set_dir(self.segments[len(self.segments)-2].dir)
+		
 		
 
 	def hit_edge(self, wind_w, wind_h):
 		head = self.get_head_pos()
 		
-		if(self.segments[0][1]*40 == -40 or self.segments[0][1]*40 == wind_h):
+		if(self.segments[0].y*40 == -40 or self.segments[0].y*40 == wind_h):
 			return True
 		
-		if(self.segments[0][0]*40 == -40 or self.segments[0][0]*40 == wind_w):
+		if(self.segments[0].x*40 == -40 or self.segments[0].x*40 == wind_w):
 			return True
 
 		else: 
 			return False
 
+	def overlap(self):
+		pos = []
+
+		for i in range(len(self.segments)):
+			pos.insert(0, (self.segments[i].x, self.segments[i].y))
+	
+		for i in range(len(pos)):
+			if(pos.count(pos[i]) > 1):
+				return True
+
+		return False
+
+
+	def reset(self, segments):
+		self.segments = segments
+		self.dir = ""
+
 		
 
 class Apple:
-	def __init__(self, color, center, radius, surface, wind_w, wind_h):
+	def __init__(self, color, surface, seg_w, seg_h, wind_w, wind_h, pos):
 		self.color = color
-		self.center = center
-		self.radius = radius
 		self.surface = surface
 		self.wind_w = wind_w
 		self.wind_h = wind_h
+		self.seg_w = seg_w
+		self.seg_h = seg_h
+		self.pos = pos
 		
 
 	def draw_apple(self):
-		pygame.draw.circle(self.surface, self.color, self.center, self.radius)
+		pygame.draw.rect(self.surface, self.color, (self.pos[0]*self.seg_w, self.pos[1]*self.seg_h, self.seg_w, self.seg_w))
 
 
-	def get_center(self):
-		return self.center
+	def get_pos(self):
+		return self.pos
 
 	def random_pos(self):
 		# calculates a random position for the apple based off the width and height of the window
 		# each block is 40 pixels thats why we multiply tje radius by two
 		#19 is to center the circle in the block, so the snake is able to collide with it
-		self.center = (randint(0, self.wind_w/(self.radius*2))*(self.radius*2)+19, randint(0, self.wind_h/(self.radius*2))*(self.radius*2)+19)
-		pygame.draw.circle(self.surface, self.color, self.center, self.radius)
+		self.pos = (randint(1, self.wind_w/self.seg_w)-1, randint(1, self.wind_h/self.seg_h)-1)
+		
 
 
+class seg:
+	def __init__(self, x, y):
+		self.x = x
+		self.y = y
 
+	def set_dir(self, dirr):
+		self.dir = dirr
 
-
+	def get_pos(self):
+		return (self.x, self.y)
 
 def redraw_window():
 	screen = pygame.display.set_mode((800, 800))
 	screen.fill((240, 250, 252))
 
-def direction_false(direct_1, direct_2, direct_3):
-	direct_1 = False
-	direct_2 = False
-	direct_3 = False
+def game_title(screen):
+	title_font = pygame.font.SysFont('freesans', 160)
+	title_surface = title_font.render("Snake", False,  (104, 209, 197))
+	pygame.draw.rect(screen, (240, 250, 252), (310, 210, 100, 80))
+	screen.blit(title_surface, (165, 155))
 
+def start_button(screen):
+	start_font = pygame.font.SysFont('microsofttaile', 30)
+	start_surface = start_font.render("Start Game", False,  (104, 209, 197))
+	pygame.draw.rect(screen, (244, 179, 206), (326, 320, 148, 40))
+	screen.blit(start_surface, (326, 320))
+
+def score_counter(screen, counter):
+	counter_font = pygame.font.SysFont('freesans', 35)
+	counter_surface = counter_font.render(("Counter: " + str(counter)), False, (240, 250, 252))
+	pygame.draw.rect(screen, (244, 179, 206), (0, 0, 170, 40))
+	screen.blit(counter_surface, (5, 0))
+
+def after_game_score(screen, counter):
+	score_font = pygame.font.SysFont('freesans', 60)
+	score_surface = score_font.render("SCORE OF " + str(counter), False, (104, 209, 197))
+	screen.blit(score_surface, (200, 230))
+
+def reset_button(screen):
+	reset_font = pygame.font.SysFont('freesans', 35)
+	reset_surface = reset_font.render("Reset", False, (104, 209, 197))
+	pygame.draw.rect(screen, (244, 179, 206), (390, 300, 120, 40))
+	screen.blit(reset_surface, (405, 300))
+
+def exit_button(screen):
+	exit_font = pygame.font.SysFont('freesans', 35)
+	exit_surface = exit_font.render("Exit", False, (104, 209, 197))
+	pygame.draw.rect(screen, (244, 179, 206), (275, 300, 100, 40))
+	screen.blit(exit_surface, (295, 300))
 
 
 def main():
 	i = False
-	hit = False
-	left = False
-	right = False
-	up = False
-	down = False
+	
 	started = False
+	reset = False
+	game_over = True
+	counter = 0
+	l = False
+    
 	start_box_pos = (326, 320)
+	reset_box_pos = (405, 300)
+	exit_box_pos =  (295, 300)
+
 	last_dir = ""
+	dirr = ""
+
 	pygame.init()
 	snake = []
 	screen = pygame.display.set_mode((800, 800))
 	pygame.display.set_caption("Snake Game")
 	clock = pygame.time.Clock()
-
-
-	start_font = pygame.font.SysFont('microsofttaile', 30)
-	title_font = pygame.font.SysFont('freesans', 160)
-
-	title_surface = title_font.render("Snake", False,  (104, 209, 197))
-	start_surface = start_font.render("Start Game", False,  (104, 209, 197))
-			
 	
-	segments = [(8, 11), (7, 11), (6, 11)]
+	segments = []
+	segments.insert(0, seg(6, 11))
+	segments.insert(0, seg(7, 11))
+	segments.insert(0, seg(8, 11))
+
 	snake = Snake((104, 209, 197), 40, segments, screen)
-	apple = Apple((242, 183, 184), (40*3+19, 40*3+19), 20, screen, 800, 800)
+	apple = Apple((242, 183, 184), screen, 40, 40, 800, 800, (5, 5))
 	
 	
 	while(True):
@@ -150,7 +218,7 @@ def main():
 		#snake.p()
 
 
-		apple_c = apple.get_center()
+		apple_pos = apple.get_pos()
 		snake_h = snake.get_head_pos()
 		
 
@@ -158,32 +226,42 @@ def main():
 		if(started == False):
 
 
-			#game title
-			pygame.draw.rect(screen, (240, 250, 252), (310, 210, 100, 80))
-			screen.blit(title_surface, (220, 160))
+			if(game_over == True):
+				game_title(screen)
 
-			#start buttom 
-			pygame.draw.rect(screen, (244, 179, 206), (start_box_pos[0], start_box_pos[1], 148, 40))
-			screen.blit(start_surface, (326, 320))
+				start_button(screen)
 
+			if(reset == True):
+				
+				reset_button(screen)
 
-		
+				exit_button(screen)
 
-
+				after_game_score(screen, counter)
 			
 		else:
+
+			#counter
+			score_counter(screen, counter)
 			
-			if(snake.hit_edge(800, 800)):
-				started = True
-
-		
+			apple.draw_apple()
 			
-			apple.draw_apple()	
+			if(snake.hit_edge(800, 800) or snake.overlap()):
+				snake.reset(segments)
+				started = False
+				game_over = False
+				reset = True
+				last_dir = ""
+				dirr = ""
+			
+			
 
-
-			if((apple_c[0]-20 <= snake_h[0]*40 and apple_c[0]+20 >= snake_h[0]*40) and (apple_c[1]-20 <= snake_h[1]*40+20 and apple_c[1]+20 >= snake_h[1]*40+20)):
+			if(apple_pos == snake_h):
 				snake.add_seg()
 				apple.random_pos()
+				counter = counter + 1
+
+				
 				
 				
 
@@ -192,7 +270,7 @@ def main():
 				snake.draw_snake("")
 
 
-			if(up):
+			if(dirr == "up"):
 				if(last_dir != "down"):
 					snake.draw_snake("up")
 					last_dir = "up"
@@ -200,7 +278,7 @@ def main():
 				else:
 					snake.draw_snake("down")
 
-			if(down):
+			if(dirr == "down"):
 				if(last_dir != "up"):
 					snake.draw_snake("down")
 					last_dir = "down"
@@ -208,7 +286,7 @@ def main():
 				else:
 					snake.draw_snake("up")
 
-			if(left):
+			if(dirr == "left"):
 
 				if(last_dir != ""):
 					
@@ -220,23 +298,13 @@ def main():
 					else:	
 						snake.draw_snake("right")
 
-			if(right):
+			if(dirr == "right"):
 				if(last_dir != "left"):
 					snake.draw_snake("right")
 					last_dir = "right"
 
 				else:	
 					snake.draw_snake("left")
-
-
-
-			
-
-		
-		
-		
-
-
 
 		
 		pygame.display.update()
@@ -250,38 +318,35 @@ def main():
 				movement = pygame.mouse.get_pos()
 				mouse_c = movement[0]
 				mouse_r = movement[1]
-				print(movement)
 				
-				if mouse_c >= start_box_pos[0] and mouse_c <= start_box_pos[0]+148 and mouse_r >= start_box_pos[1] and mouse_r <= start_box_pos[1]+40:
-					started = True
-					print("hit")
-			
+				if(reset == False):
+					if mouse_c >= start_box_pos[0] and mouse_c <= start_box_pos[0]+148 and mouse_r >= start_box_pos[1] and mouse_r <= start_box_pos[1]+40:
+						started = True
+						counter = 0
+
+				else:
+					if mouse_c >= reset_box_pos[0] and mouse_c <= reset_box_pos[0]+120 and mouse_r >= reset_box_pos[1] and mouse_r <= reset_box_pos[1]+40:
+						started = True
+						counter = 0
+
+					if mouse_c >= exit_box_pos[0] and mouse_c <= exit_box_pos[0]+100 and mouse_r >= exit_box_pos[1] and mouse_r <= exit_box_pos[1]+40:
+						sys.exit()
+						break
+
+
 			if event.type == pygame.KEYDOWN:
 
 				if event.key == pygame.K_DOWN:
-					left = False
-					right = False
-					up = False
-					down = True	
-
+					dirr = "down"
 				if event.key == pygame.K_UP:
-					up = True
-					left = False
-					right = False
-					down = False
-					
+					dirr ="up"
 				if event.key == pygame.K_LEFT:
-					left = True
-					right = False
-					up = False
-					down = False
+					
+					dirr = "left"
 
 				if event.key == pygame.K_RIGHT:
-					left = False
-					right = True
-					up = False
-					down = False
-			
+					dirr = "right"
+					
 
 		
 		clock.tick(5)		
